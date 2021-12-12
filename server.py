@@ -61,7 +61,7 @@ async def on_reaction_remove(reaction, user):
 #         print(member.nick)
    
 
-
+# ty yaakov
 
 
 
