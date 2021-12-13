@@ -51,14 +51,14 @@ async def on_reaction_remove(reaction, user):
 
 
 
-# @client.event
-# async def on_voice_state_update(member, before, after):
-#     print(before.
-#     print(after)
-#     if not member.nick:
-#         print(member.name)
-#     else:
-#         print(member.nick)
+@client.event
+async def on_voice_state_update(member, before, after):
+    print(before)
+    print(after)
+    if not member.nick:
+        print(member.name)
+    else:
+        print(member.nick)
    
 
 # ty yaakov
