@@ -1,9 +1,16 @@
 import discord
 import asyncio 
+import json
+import os
+import requests
 
-file = open('token', 'r')
 
-token = file.readline()
+discord_file = open('discord_token', 'r')
+twitter_file = open('twitter_token', 'r')
+
+discord_token = discord_file.readline()
+twitter_token = twitter_file.readline()
+
 
 intents = discord.Intents.default()
 intents.members = True
@@ -13,6 +20,58 @@ client = discord.Client(intents = intents)
 
 games = {}
 
+def auth():
+    return twitter_token
+
+
+def create_headers(twitter_token):
+    headers = {"Authorization": "Bearer {}".format(twitter_token)}
+    return headers
+
+def create_url(keyword, api, max_results = 0):
+
+    twitter_url = "https://api.twitter.com/2/"
+
+    if api == 'search':
+        search_url = twitter_url + 'tweets/search/recent' 
+        query_params = {'query': keyword,
+                    # 'start_time': start_date,
+                    # 'end_time': end_date,
+                    'expansions': 'author_id,in_reply_to_user_id,geo.place_id',
+                    'tweet.fields': 'id,text,author_id,in_reply_to_user_id,geo,conversation_id,created_at,lang,public_metrics,referenced_tweets,reply_settings,source',
+                    'user.fields': 'id,name,username,created_at,description,public_metrics,verified',
+                    'place.fields': 'full_name,id,country,country_code,geo,name,place_type',
+                    'next_token': {}}
+        if max_results != 0:
+            query_params['max_results'] = max_results
+        return(search_url, query_params)
+
+    elif api == 'userlookup':
+        search_url = twitter_url + 'users/by/username/' + keyword
+        return(search_url, [])
+    
+    #TODO: Finish user lookup, save ID, move to show past X tweets from user.
+        
+
+
+def connect_to_endpoint(url, headers, params = [], next_token = None):
+    print(url)
+    if next_token:
+        params['next token'] = next_token
+    response = requests.request("GET", url, headers = headers, params = params)
+    print(response)
+    print("Endpoint Response Code: " + str(response.status_code))
+    if response.status_code != 200:
+        raise Exception(response.status_code, response.text)
+    return response.json()
+
+headers = create_headers(twitter_token)
+
+
+"""
+Discord bot code
+
+"""
 
 @client.event
 async def on_message(message):
@@ -25,7 +84,29 @@ async def on_message(message):
         await asyncio.sleep(minutes_util_game*60)
         await message.channel.send(f'**{message.author.name}\'s** game is beginning now.\n {" ".join([f"<@{user_id}>" for user_id in games[sentMessage.id]])}')
         games.pop(sentMessage.id)
-        
+    
+    
+    else:
+        cutmsg = message.content[3::]
+        searchInfo = cutmsg.split(',')
+        keyword = searchInfo[0]
+        if len(searchInfo) > 1:
+            max_results = searchInfo[1]
+            print(max_results)
+        print(keyword)
+
+        if message.content.startswith("!s "):
+            api = 'search'
+            url = create_url(keyword, api, max_results)
+            json_response = connect_to_endpoint(url[0], headers, url[1])
+            print(json.dumps(json_response, indent=4, sort_keys=True))
+    
+        if message.content.startswith("!u "):
+            api = 'userlookup'
+            url = create_url(keyword, api)
+            json_response = connect_to_endpoint(url[0], headers)
+            print(json.dumps(json_response, indent=4, sort_keys=True))
+       
 
 
 
@@ -49,8 +130,6 @@ async def on_reaction_remove(reaction, user):
 
 
 
-
-
 @client.event
 async def on_voice_state_update(member, before, after):
     print(before)
@@ -64,7 +143,11 @@ async def on_voice_state_update(member, before, after):
 # ty yaakov
 
 
+""" 
+Twitter search code 
+
+"""
 
 
-
-client.run(token)
+client.run(discord_token)
+client.run(twitter_token)
