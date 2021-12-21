@@ -11,9 +11,9 @@ twitter_file = open('twitter_token', 'r')
 discord_token = discord_file.readline()
 twitter_token = twitter_file.readline()
 
-
 intents = discord.Intents.default()
 intents.members = True
+intents.voice_states = True
 
 client = discord.Client(intents = intents)
 
@@ -50,11 +50,12 @@ def create_url(keyword, api, max_results = 0):
         search_url = twitter_url + 'users/by/username/' + keyword
         return(search_url, [])
     
-    #TODO: Finish user lookup, save ID, move to show past X tweets from user.
-        
+    elif api == 'recent':
+        search_url = twitter_url + 'users/{}/tweets'.format(keyword)
+        return(search_url, [])    
 
 
-def connect_to_endpoint(url, headers, params = [], next_token = None):
+def connect_to_endpoint(url, headers, params = dict(), next_token = None):
     print(url)
     if next_token:
         params['next token'] = next_token
@@ -89,6 +90,7 @@ async def on_message(message):
     else:
         cutmsg = message.content[3::]
         searchInfo = cutmsg.split(',')
+        print(json.dumps(searchInfo, indent=4))
         keyword = searchInfo[0]
         if len(searchInfo) > 1:
             max_results = searchInfo[1]
@@ -102,10 +104,34 @@ async def on_message(message):
             print(json.dumps(json_response, indent=4, sort_keys=True))
     
         if message.content.startswith("!u "):
+            
+# Get User ID
+
             api = 'userlookup'
             url = create_url(keyword, api)
             json_response = connect_to_endpoint(url[0], headers)
-            print(json.dumps(json_response, indent=4, sort_keys=True))
+            id = json_response["data"]["id"]
+
+
+            api = 'recent'
+            url = create_url(id, api)
+            urldict = dict()
+            urldict["max_results"] = max_results
+            json_response = connect_to_endpoint(url[0], headers, urldict)
+
+            combinemessage = ''
+            for tweet in json_response['data']:
+                if tweet['text'].lower().find("just launched") >= 0:
+                    print(tweet['text'])
+                    combinemessage += f"{tweet['text']}\n"
+                else:
+                    combinemessage += f"{tweet['text']}\n"
+            await message.channel.send(combinemessage.rstrip())
+
+
+
+
+
        
 
 
@@ -132,22 +158,23 @@ async def on_reaction_remove(reaction, user):
 
 @client.event
 async def on_voice_state_update(member, before, after):
-    print(before)
-    print(after)
-    if not member.nick:
-        print(member.name)
-    else:
-        print(member.nick)
-   
-
+    if before.self_stream == True and after.self_stream == False:
+        print(before.self_stream)
+        print(after.self_stream)
+        async for guild in client.fetch_guilds(limit=150):
+            print(guild.name)
+            if guild.name == "Sensible Doggos":
+                allchannels = await guild.fetch_channels()
+                for channel in allchannels:
+                    if channel.name == "bot-land":
+                        await channel.send(f"<@{member.id}> Game over, time to do pushups", tts=True)
+                
+                
+        
+#TODO fix this shit
 # ty yaakov
-
-
-""" 
-Twitter search code 
-
-"""
-
 
 client.run(discord_token)
 client.run(twitter_token)
+
+
