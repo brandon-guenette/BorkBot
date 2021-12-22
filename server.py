@@ -3,7 +3,7 @@ import asyncio
 import json
 import os
 import requests
-
+import time
 
 discord_file = open('discord_token', 'r')
 twitter_file = open('twitter_token', 'r')
@@ -141,7 +141,6 @@ async def on_reaction_add(reaction, user):
     if reaction.message.id in games:
         if user.id not in games[reaction.message.id]:
             games[reaction.message.id].append(user.id)
-            print(games)
 
 
 @client.event
@@ -149,32 +148,27 @@ async def on_reaction_remove(reaction, user):
     if reaction.message.id in games:
         if user.id in games[reaction.message.id]:
             games[reaction.message.id].remove(user.id)
-            print(games)
 
 
 #TODO: Remember to keep user name in list if at least one of their reactions remain on the message
 
 
 
-@client.event
-async def on_voice_state_update(member, before, after):
-    if before.self_stream == True and after.self_stream == False:
-        print(before.self_stream)
-        print(after.self_stream)
-        async for guild in client.fetch_guilds(limit=150):
-            print(guild.name)
-            if guild.name == "Sensible Doggos":
-                allchannels = await guild.fetch_channels()
-                for channel in allchannels:
-                    if channel.name == "bot-land":
-                        await channel.send(f"<@{member.id}> Game over, time to do pushups", tts=True)
+# @client.event
+# async def on_voice_state_update(member, before, after):
+#     if before.self_stream == True and after.self_stream == False:
+#          async for guild in client.fetch_guilds(limit=150):
+#             if guild.name == "Sensible Doggos":
+#                 allchannels = await guild.fetch_channels()
+#                 for channel in allchannels:
+#                     if channel.name == "bot-land":
+#                         await channel.send(f"{member.nick} Game over, time to do pushups")
                 
                 
         
 #TODO fix this shit
 # ty yaakov
-
-client.run(discord_token)
-client.run(twitter_token)
-
-
+while True:
+    client.run(discord_token)
+    client.run(twitter_token)
+    time.sleep(3600)
